@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ContactForm } from './ContactForm/ContactForm';
 import contactsList from '../data/data.json';
 import { ContactList } from './ContactList/ContactList';
@@ -7,69 +7,55 @@ import { nanoid } from 'nanoid';
 import Notiflix from 'notiflix';
 import { Container } from './App.styled';
 
-export class App extends Component {
-  state = {
-    contacts: contactsList,
-    filter: '',
-  };
-  componentDidMount() {
+export const App = () => {
+  const [contacts, setContacts] = useState(() => {
     const localItem = localStorage.getItem('contacts');
     const parsedContacts = JSON.parse(localItem);
     if (parsedContacts !== null) {
-      this.setState({ contacts: parsedContacts });
+      return parsedContacts;
     }
-  }
-  componentDidUpdate(prevProps, prevState) {
-    if (this.state.contacts !== prevState.contacts) {
-      localStorage.setItem('contacts', JSON.stringify(this.state.contacts));
-    }
-  }
+    return contactsList;
+  });
 
-  filteredContacts = newFilter => {
-    this.setState({
-      filter: newFilter,
-    });
+  const [filter, setFilter] = useState('');
+
+  useEffect(() => {
+    localStorage.setItem('contacts', JSON.stringify(contacts));
+  }, [contacts]);
+
+  const filteredContacts = newFilter => {
+    setFilter(newFilter);
   };
 
-  deleteContactElement = contactId => {
-    this.setState(prevState => ({
-      contacts: prevState.contacts.filter(contact => contact.id !== contactId),
-    }));
+  const deleteContactElement = contactId => {
+    setContacts(prevState =>
+      prevState.filter(contact => contact.id !== contactId)
+    );
   };
 
-  addContact = newContactData => {
+  const addContact = newContactData => {
     const newContact = {
       id: nanoid(),
       name: newContactData.name,
       number: newContactData.number,
     };
-    if (this.state.contacts.some(contact => contact.name === newContact.name)) {
+    if (contacts.some(contact => contact.name === newContact.name)) {
       Notiflix.Notify.failure(`${newContact.name} is already in contacts.`);
     } else {
-      this.setState(prevState => ({
-        contacts: [...prevState.contacts, newContact],
-      }));
+      setContacts(prevState => [...prevState, newContact]);
     }
   };
+  const visibleContacts = contacts.filter(contact => {
+    return contact.name.toLowerCase().includes(filter.toLowerCase());
+  });
 
-  render() {
-    const { contacts, filter } = this.state;
-
-    const visibleContacts = contacts.filter(contact => {
-      return contact.name.toLowerCase().includes(filter.toLowerCase());
-    });
-
-    return (
-      <Container>
-        <h1>Phonebook</h1>
-        <ContactForm onAdd={this.addContact} />
-        <h2>Contacts</h2>
-        <Filter sorted={filter} onChangeFilter={this.filteredContacts} />
-        <ContactList
-          items={visibleContacts}
-          onDelete={this.deleteContactElement}
-        />
-      </Container>
-    );
-  }
-}
+  return (
+    <Container>
+      <h1>Phonebook</h1>
+      <ContactForm onAdd={addContact} />
+      <h2>Contacts</h2>
+      <Filter sorted={filter} onChangeFilter={filteredContacts} />
+      <ContactList items={visibleContacts} onDelete={deleteContactElement} />
+    </Container>
+  );
+};
